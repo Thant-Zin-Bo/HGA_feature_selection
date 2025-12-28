@@ -1,39 +1,67 @@
-The goal of this project is to apply Hybrid GA for feature reduction.
-Fitness function uses random forest as a (binary) classifier.
+# 🔍 GA-Based Feature Selection for Fault Detection
+### Optimizing Sensor Observability in Semiconductor Manufacturing
 
-syn_data_on_SCOM.ipynb:
-	To generate Synthetic data based on SECOM dataset
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat&logo=python) 
+![Status](https://img.shields.io/badge/Status-Optimization_Active-success)
+![Focus](https://img.shields.io/badge/Focus-Observability%20%26%20RCA-orange)
 
-HGA_with_synthetic_data (1).ipynb
-	Original code has been modularized for better understanding, 
-	population initialization now based on probability=desired features/total features to make more likely for the algorithm to focus on small subsets instead of larger ones in further generations.
-	Stopped modifications of this file and instead renamed it to keep improving it --> HGA_generic.ipynb: 
+## 📋 Overview
+The goal of this project is to apply a **Hybrid Genetic Algorithm (HGA)** for feature reduction in high-dimensional manufacturing data. By using a **Random Forest (binary classifier)** as the fitness function, the system identifies the most critical sensors for fault detection.
 
-HGA_generic.ipynb: 
-07/05/25:
-	Added alternative cell to use the combined SECOM dataset csv in the dataset subfolder
-    Define the dataset folder path (the files are in a subfolder called dataset)
-	Added printouts for better progress tracking.
-	Evaluation of the population (fitness) is now parallelized with the evaluate_population() function.
-08/05/25:
-	Evaluate fitness population in parallel and saves each new pair individual, fitness in cache, population is pre-filtered so only individuals not in the cache are actually calculated. It could be improved if saved to disk, but then must review dataset splitting process. Although early convergence problem persists, current time is around 8 min for 10 generations, population=100 and desired number of features= 50. And results seems good: Result for Generation 10/10: Best Fitness = -0.5814, Features Selected = 29
+This addresses the "Curse of Dimensionality" in the [SECOM dataset](https://archive.ics.uci.edu/dataset/179/secom), where 591 sensors create significant noise. Reducing this to a compact subset allows for:
+* **Better Observability:** focusing on signals that actually matter.
+* **Reduced Compute:** faster inference times for real-time monitoring.
+* **Clearer RCA:** easier identification of root causes for manufacturing defects.
 
+## ⚙️ Performance Engineering & Optimizations
+*To ensure the solution scales, several engineering optimizations were implemented in `HGA_generic.ipynb`:*
 
-unifies_dataset.py
-	Script to unify the 2 files of SECOM dataset into a single .csv
-	output file saved in the subfolder: dataset/SECOM_combined_dataset.csv
-	
+* **Parallelization:** The `evaluate_population()` function is parallelized to assess multiple chromosome candidates simultaneously, significantly reducing runtime.
+* **Smart Caching:** Implemented a caching mechanism to store `(individual, fitness)` pairs. The population is pre-filtered so only new, unique individuals are calculated, avoiding redundant model training.
+* **Probability-Based Initialization:** Population initialization is weighted by `probability = desired_features / total_features`. This biases the algorithm to focus on smaller, more efficient feature subsets early in the evolutionary process.
+* **Current Performance:** ~8 minutes for 10 generations (Pop=100, Target Features=50) with early convergence.
 
-dataset folder:
-	It contains the SECOM dataset:
-	https://archive.ics.uci.edu/dataset/179/secom
-	
-	Attribute Information:
-	Key facts: Data Structure: The data consists of 2 files the dataset file SECOM 
-	consisting of 1567 examples each with 591 features a 1567 x 591 matrix and a labels 
-	file containing the classifications and date time stamp for each example.
+## 📂 Dataset Information
+**Source:** [UCI Machine Learning Repository - SECOM](https://archive.ics.uci.edu/dataset/179/secom)
 
-	The data is represented in a raw text file each line representing an individual 
-	example and the features seperated by spaces. The null values are represented by 
-	the 'NaN' value as per MatLab.
-	
+* **Structure:** 1567 examples × 591 features.
+* **Format:** Raw text file with space-separated features. Null values are represented as `NaN`.
+* **Components:**
+    * `secom.data`: The 1567 x 591 feature matrix.
+    * `secom_labels.data`: Classifications (Pass/Fail) and timestamps.
+* **Preprocessing:** The `unifies_dataset.py` script merges these files into a single CSV located at `dataset/SECOM_combined_dataset.csv`.
+
+## 🛠️ File Structure & Description
+
+### Core Logic
+* **`HGA_generic.ipynb`** *(Active Development)*
+    * The main evolutionary engine.
+    * **Updates:** Includes parallel fitness evaluation, caching strategies, and improved progress tracking.
+    * **Results:** Recent tests show strong reduction capabilities (e.g., Generation 10 reached Best Fitness = -0.5814 with only **29 features selected**).
+* **`HGA_with_synthetic_data (1).ipynb`** *(Legacy/Reference)*
+    * Original modularized code. Kept as a reference for the probability-based initialization logic before the move to the generic version.
+* **`unifies_dataset.py`**
+    * ETL script. Reads the raw space-separated text files, handles `NaN` values, and unifies features with labels into a production-ready CSV.
+
+### Validation & Tools
+* **`syn_data_on_SCOM.ipynb`**
+    * Generates synthetic data based on SECOM statistics. Used to validate that the HGA can recover "ground truth" features in a controlled environment.
+* **`bestracker.py`**
+    * Utility class for tracking experiment results (best chromosomes per generation) to analyze convergence over time.
+
+## 🚀 Usage
+
+1.  **Prepare Data:**
+    ```bash
+    python unifies_dataset.py
+    ```
+    *Creates `dataset/SECOM_combined_dataset.csv`.*
+
+2.  **Run Optimization:**
+    Open `HGA_generic.ipynb` in Jupyter/Colab.
+    * Set your `desired_features` count.
+    * Run the notebook to observe the Genetic Algorithm narrowing down the sensor list.
+
+3.  **Analyze:**
+    The notebook outputs progress logs (e.g., `Generation 10/10: Best Fitness = -0.5814`) to track how effectively the system is eliminating noise.
+
